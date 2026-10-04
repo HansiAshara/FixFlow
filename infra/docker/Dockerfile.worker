@@ -1,0 +1,23 @@
+# Build stage for .NET Worker
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+COPY Directory.Build.props ./
+COPY FixFlow.sln ./
+COPY contracts/events/FixFlow.Contracts.csproj contracts/events/
+COPY apps/worker/FixFlow.Worker.csproj apps/worker/
+COPY apps/api/FixFlow.Api.csproj apps/api/
+
+RUN dotnet restore apps/worker/FixFlow.Worker.csproj
+
+COPY contracts/ contracts/
+COPY apps/worker/ apps/worker/
+
+WORKDIR /src/apps/worker
+RUN dotnet publish -c Release -o /app/publish --no-restore
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/runtime:9.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "FixFlow.Worker.dll"]

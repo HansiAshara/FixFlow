@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiResolutionAssistantResponse",
+  "type": "object",
+  "required": ["suggestedActionItems", "preventionTips", "summaryQualityScore"],
+  "properties": {
+    "suggestedActionItems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "preventionTips": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summaryQualityScore": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,119 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fixflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fixflow_db}
+      POSTGRES_USER: ${POSTGRES_USER:-fixflow_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fixflow_local_dev_password_change_in_prod}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fixflow_app} -d ${POSTGRES_DB:-fixflow_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fixflow_network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: fixflow_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-fixflow_mq}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-fixflow_mq_local_password}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fixflow_network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: fixflow_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - fixflow_network
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    container_name: fixflow_api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-fixflow_db};Username=${POSTGRES_USER:-fixflow_app};Password=${POSTGRES_PASSWORD:-fixflow_local_dev_password_change_in_prod}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_DEFAULT_USER:-fixflow_mq}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS:-fixflow_mq_local_password}
+      Jwt__Issuer: FixFlow.Api
+      Jwt__Audience: FixFlow.Web
+      Jwt__SecretKey: ${Jwt__SecretKey:-FixFlow_Super_Secure_Local_Development_Key_At_Least_32_Bytes_Long_2026!}
+    ports:
+      - "${API_PORT:-5000}:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - fixflow_network
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.worker
+    container_name: fixflow_worker
+    restart: unless-stopped
+    environment:
+      DOTNET_ENVIRONMENT: ${DOTNET_ENVIRONMENT:-Development}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__Username: ${RABBITMQ_DEFAULT_USER:-fixflow_mq}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS:-fixflow_mq_local_password}
+      Ollama__BaseUrl: http://ollama:11434
+      Ollama__Model: ${Ollama__Model:-llama3.2:3b}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - fixflow_network
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+    container_name: fixflow_web
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:80"
+    depends_on:
+      - api
+    networks:
+      - fixflow_network
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  ollama_data:
+
+networks:
+  fixflow_network:
+    driver: bridge

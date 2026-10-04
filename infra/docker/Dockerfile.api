@@ -1,0 +1,30 @@
+# Build stage for ASP.NET Core API
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy project definition files and props for restore caching
+COPY Directory.Build.props ./
+COPY FixFlow.sln ./
+COPY contracts/events/FixFlow.Contracts.csproj contracts/events/
+COPY apps/api/FixFlow.Api.csproj apps/api/
+COPY apps/worker/FixFlow.Worker.csproj apps/worker/
+COPY tests/FixFlow.UnitTests/FixFlow.UnitTests.csproj tests/FixFlow.UnitTests/
+COPY tests/FixFlow.IntegrationTests/FixFlow.IntegrationTests.csproj tests/FixFlow.IntegrationTests/
+COPY tests/FixFlow.ArchitectureTests/FixFlow.ArchitectureTests.csproj tests/FixFlow.ArchitectureTests/
+
+RUN dotnet restore apps/api/FixFlow.Api.csproj
+
+# Copy full source and publish
+COPY contracts/ contracts/
+COPY apps/api/ apps/api/
+
+WORKDIR /src/apps/api
+RUN dotnet publish -c Release -o /app/publish --no-restore
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+WORKDIR /app
+EXPOSE 5000
+ENV ASPNETCORE_URLS=http://+:5000
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "FixFlow.Api.dll"]
