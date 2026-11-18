@@ -161,6 +161,22 @@ app.MapPerformanceEndpoints();
 app.MapNotificationEndpoints();
 app.MapAdminEndpoints();
 
+// Auto-apply EF migrations & seed roles
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<FixFlowDbContext>();
+    await db.Database.MigrateAsync();
+
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+    foreach (var role in new[] { AppRoles.User, AppRoles.Technician, AppRoles.Admin })
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+        {
+            await roleManager.CreateAsync(new ApplicationRole(role));
+        }
+    }
+}
+
 app.Run();
 
 // Required for WebApplicationFactory in Integration Tests
