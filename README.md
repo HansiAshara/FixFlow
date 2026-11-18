@@ -1,216 +1,414 @@
-# FixFlow - Intelligent Issue Reporting & Technician Matching Platform
+# FixFlow
+### Intelligent Issue Reporting & Technician Matching Platform
 
-FixFlow is a production-oriented, modular platform that pairs natural language issue diagnosis with verified technician matching and authoritative work order lifecycle governance.
+FixFlow is an AI-powered maintenance and repair management platform that transforms natural-language problem reports into structured work orders and connects customers with qualified, reliable technicians through intelligent matching and performance-based recommendations.
+
+**AI-Powered · Event-Driven · Modular Monolith · Production-Oriented**
 
 ---
 
-## 1. Project Overview
-FixFlow simplifies maintenance and repair workflows for homeowners, facility managers, and service technicians by converting free-text problem descriptions into structured work orders and ranking eligible technicians based on verified skills and real-world performance history.
+## 1. Overview
 
-## 2. Real-World Problem
-- Users facing maintenance or electrical problems frequently cannot diagnose the root cause or identify the precise trade qualification required.
-- Finding dependable, verified technicians with proven reliability is difficult and prone to fake reviews.
-- Lack of authoritative work order state tracking leads to unresolved disputes, missed SLAs, and communication breakdowns.
+Finding the right technician for a maintenance problem is often difficult. Customers may not know the technical cause of an issue, which trade is required, or whether a service provider is genuinely qualified.
 
-## 3. FixFlow Solution
-- **Natural Language Reporting**: Users describe their issue without needing trade jargon.
-- **Local AI Analysis**: Asynchronous background workers categorize problems, assess risks, and determine required skill tags.
-- **Deterministic Prioritization & Matching**: Objective mathematical formulas score urgency and rank technicians.
-- **Authoritative State Machine**: Backend-governed work order states enforce step-by-step progress from acceptance to customer verification.
-- **Human-in-the-Loop Verification**: Administrators rigorously review trade licenses and diplomas before granting verified status.
+FixFlow addresses these challenges through AI-assisted issue analysis, verified technician profiles, deterministic recommendation algorithms, and an authoritative work-order management system.
 
-## 4. Main User Workflow
-1. User reports an issue in natural language.
-2. System dispatches an asynchronous AI analysis event via RabbitMQ.
-3. Worker invokes Ollama LLM to extract categories, skills, and risk levels.
-4. Issue priority is calculated deterministically (1–10).
-5. Matching engine ranks eligible, verified technicians.
-6. User selects a technician, creating an authoritative work order.
-7. Technician accepts or rejects within the SLA window.
-8. Technician records progress and marks work completed.
-9. User verifies the resolution with ratings/feedback or reopens if unsatisfactory.
-10. Feedback updates the technician's permanent performance score.
+### Key Objectives
 
-## 5. Reporter Capabilities
-- Report maintenance issues with natural language text and location.
-- View AI classification tags and calculated priority.
-- Browse and select ranked technicians.
-- Track real-time work order status.
-- Verify work resolution or trigger reopening.
+- Simplify maintenance issue reporting through natural language.
+- Automatically identify issue categories, required skills, and potential risks.
+- Recommend suitable technicians using transparent scoring algorithms.
+- Establish trust through qualification verification and performance tracking.
+- Manage repair workflows through controlled work-order lifecycles.
+- Improve service quality through customer feedback and historical performance.
 
-## 6. Technician Capabilities
-- Build a professional trade profile with experience and skill tags.
-- Upload formal certificates, licenses, and experience portfolios.
-- Accept or reject assigned work orders within the SLA window.
-- Transition work status (`IN_PROGRESS`, `AWAITING_REPORTER`).
-- View personal performance metrics (ratings, response rates, completion rates).
+## 2. Core Capabilities
 
-## 7. Admin Responsibilities
-- Review and verify uploaded technician qualification documents (strict human-in-the-loop governance).
-- Manage user account statuses and suspensions.
-- Inspect system-wide audit logs and health probes.
+| Feature | Description |
+|---|---|
+| Intelligent Issue Reporting | Submit maintenance problems using natural-language descriptions and supporting images. |
+| AI Issue Analysis | Automatically identify categories, required skills, risk levels, and issue summaries. |
+| Priority Assessment | Calculate issue priority using deterministic business rules. |
+| Technician Matching | Rank eligible technicians using skills, experience, performance, and availability. |
+| Qualification Verification | Admin-reviewed certificates, licenses, portfolios, and alternative experience evidence. |
+| Work Order Management | Govern assignments, acceptance, progress, completion, and reopening. |
+| Resolution Verification | Allow customers to verify completed work and provide feedback. |
+| Performance Analytics | Maintain technician scorecards using historical service outcomes. |
+| Notifications | Deliver event-driven updates throughout the service lifecycle. |
+| Administration | Manage users, technician verification, operational activities, and audit records. |
 
-## 8. AI Capabilities
-- Natural language parsing using local LLMs (Ollama `llama3.2:3b`).
-- Category classification (`Plumbing`, `Electrical`, `HVAC`, `Carpentry`, etc.).
-- Skill extraction and risk assessment.
-- Post-resolution insights and prevention tips.
-*Note: AI output is strictly treated as untrusted input and validated against JSON schemas.*
+## 3. User Roles
 
-## 9. Matching Approach
-Technician recommendation scores combine four weighted factors:
-- **Skill Match (40%)**: Overlap between required skills and technician verified skills.
-- **Experience & Verification (25%)**: Years of experience and admin verification tier.
-- **Historical Performance (20%)**: FixFlow job completion history and verified reviews.
-- **Availability (15%)**: Real-time capacity and active workload.
+**Customer / Reporter**
+- Report maintenance issues.
+- Review AI analysis and recommendations.
+- Select technicians and track work orders.
+- Verify resolutions and submit feedback.
 
-## 10. Technician Performance Feedback Loop
-Every verified resolution, response time, and customer rating updates the technician's historical scorecard. Reopened work orders apply a mathematical penalty, ensuring recommendation algorithms favor consistent, high-quality providers.
+**Technician**
+- Create and manage professional profiles.
+- Maintain trade skills and experience.
+- Submit qualifications and work portfolios.
+- Accept assignments and update job progress.
+- Track personal performance metrics.
 
-## 11. Distributed Architecture
-A **Modular Monolith** backend (`FixFlow.Api`) handles synchronous client HTTP requests, while distributed background workers (`FixFlow.Worker`) consume messages from **RabbitMQ** via **MassTransit** to run asynchronous AI classification and performance recalculations.
+**Administrator**
+- Review technician qualifications and verification requests.
+- Manage user accounts and account suspensions.
+- Monitor issues and work orders.
+- Inspect administrative audit logs and system health.
 
-## 12. Technology Stack
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, TanStack Query, React Hook Form, Zod, Vitest.
-- **Backend**: .NET 9, C# 13, ASP.NET Core, EF Core 9, ASP.NET Core Identity, FluentValidation, MassTransit.
-- **Database**: PostgreSQL 16.
-- **Message Broker**: RabbitMQ 3.13.
-- **AI Engine**: Ollama (local LLM inference).
-- **Infrastructure**: Docker, Docker Compose, GitHub Actions.
+## 4. Intelligent Matching Algorithm
 
-## 13. Repository Structure
+FixFlow uses a weighted, deterministic scoring model to rank eligible technicians.
+
+| Matching Factor | Weight |
+|---|---:|
+| Verified Skill Match | 40% |
+| Experience & Verification | 25% |
+| Historical Performance | 20% |
+| Availability | 15% |
+| **Total** | **100%** |
+
+The final recommendation score is calculated as:
+
+\[
+S = 0.40M + 0.25E + 0.20P + 0.15A
+\]
+
+Where each component is normalized to a score between 0 and 100.
+
+**Eligibility filtering is performed before ranking.** Technicians must satisfy applicable qualification, verification, service-area, and availability requirements. Mandatory legal qualifications cannot be bypassed through a high recommendation score.
+
+## 5. AI-Powered Issue Analysis
+
+FixFlow integrates locally hosted LLM inference using Ollama to understand unstructured maintenance descriptions.
+
+The asynchronous analysis pipeline:
+
+1. Receives a newly reported issue.
+2. Publishes an analysis event through RabbitMQ.
+3. Processes the event using a background worker.
+4. Invokes the configured Ollama model.
+5. Extracts structured issue information.
+6. Validates the response against JSON schemas and business rules.
+7. Persists the analysis and updates the issue processing status.
+
+**AI capabilities**
+- Issue category classification.
+- Required skill extraction.
+- Risk assessment.
+- Natural-language issue summarization.
+- Post-resolution insights and preventive recommendations.
+
+AI-generated information is treated as untrusted input. Authoritative business decisions, including issue prioritization, technician eligibility, and work-order transitions, remain under backend control.
+
+## 6. Work Order Lifecycle
+
+FixFlow enforces an authoritative backend-managed state machine.
+
+```text
+PENDING_ACCEPTANCE
+        |
+        v
+     ACCEPTED
+        |
+        v
+    IN_PROGRESS
+        |
+        v
+ AWAITING_REPORTER
+        |
+   +----+----+
+   |         |
+   v         v
+VERIFIED  REOPENED
 ```
+
+Additional transitions cover rejection, cancellation, and SLA expiration.
+
+Every permitted transition is validated against the acting user's permissions and current business state. Work-order history provides an auditable record of operational changes.
+
+## 7. Technical Architecture
+
+FixFlow follows a **Modular Monolith architecture** with independently executing background workers for asynchronous processing.
+
+```mermaid
+flowchart TB
+    U[React Web Application]
+    API[ASP.NET Core API]
+    DB[(PostgreSQL)]
+    MQ[RabbitMQ]
+    W[.NET Background Worker]
+    AI[Ollama LLM]
+
+    U <-->|REST API| API
+    API <--> DB
+    API -->|Publish Events| MQ
+    MQ -->|Consume Events| W
+    W <--> AI
+    W <--> DB
+    W -->|Publish Results| MQ
+    MQ --> API
+```
+
+**Architectural principles**
+- Modular business domains with explicit boundaries.
+- Separation of domain, application, and infrastructure concerns.
+- Asynchronous event-driven background processing.
+- Backend-enforced authorization and business invariants.
+- Reliable message handling and idempotent event processing.
+- Automated testing and architecture boundary validation.
+
+### Backend Modules
+
+| Module | Responsibility |
+|---|---|
+| Identity | Authentication, JWT and role management |
+| Issues | Issue reporting and prioritization |
+| Matching | Technician eligibility and ranking |
+| Technicians | Profiles, skills and qualification verification |
+| WorkOrders | Work-order lifecycle management |
+| Resolutions | Customer verification, ratings and rework |
+| Performance | Historical scorecards and calculations |
+| Notifications | In-app and event-driven notifications |
+| Administration | Verification governance and audit logs |
+
+## 8. Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| Frontend | React 19, TypeScript, Vite |
+| Styling | Tailwind CSS |
+| State Management | TanStack Query |
+| Forms & Validation | React Hook Form, Zod |
+| Frontend Testing | Vitest, React Testing Library |
+| Backend | .NET 10 LTS, C# 14, ASP.NET Core |
+| ORM | Entity Framework Core |
+| Authentication | ASP.NET Core Identity, JWT |
+| Backend Validation | FluentValidation |
+| Messaging | RabbitMQ, MassTransit |
+| Database | PostgreSQL |
+| AI Engine | Ollama, Llama 3.2 3B |
+| Backend Testing | xUnit, integration testing |
+| Architecture Testing | NetArchTest |
+| Infrastructure | Docker, Docker Compose |
+| CI/CD | GitHub Actions |
+
+*The backend target is .NET 10 LTS. Existing .NET 9 project components must be aligned with the target framework and compatible package versions before feature implementation.*
+
+## 9. Repository Structure
+
+```text
 FixFlow/
+├── .github/
+│   └── workflows/             # GitHub Actions pipelines
 ├── apps/
-│   ├── web/                    # React + TypeScript + Tailwind frontend
-│   ├── api/                    # ASP.NET Core Modular Monolith API
-│   └── worker/                 # .NET Worker Service (MassTransit + Ollama)
+│   ├── web/                   # React + TypeScript frontend
+│   ├── api/                   # ASP.NET Core modular monolith
+│   └── worker/                # Background processing service
 ├── contracts/
-│   ├── events/                 # C# MassTransit Integration Event Contracts
-│   └── schemas/                # JSON Schemas for AI structured validation
-├── tests/
-│   ├── FixFlow.UnitTests/      # Domain rule & algorithm unit tests
-│   ├── FixFlow.IntegrationTests/# WebApplicationFactory API health tests
-│   └── FixFlow.ArchitectureTests/# NetArchTest layer boundary enforcement
-├── docs/                       # Comprehensive architectural & domain specifications
+│   ├── events/                # Integration event contracts
+│   └── schemas/                # AI JSON schemas
+├── docs/                       # Architecture and product documentation
 ├── infra/
-│   ├── docker/                 # Dockerfiles & Nginx configurations
-│   └── scripts/                # Helper setup & model download scripts
-├── .github/workflows/          # GitHub Actions CI workflow
-├── docker-compose.yml          # Container orchestration definition
-├── Directory.Build.props       # Centralized .NET 9 configuration
-├── FixFlow.sln                 # .NET Solution file
-├── AGENTS.md                   # Strict guidelines for AI agents & contributors
-├── CONTRIBUTING.md             # Contributor ownership matrix & git rules
+│   ├── docker/                # Dockerfiles and Nginx configuration
+│   └── scripts/               # Infrastructure helper scripts
+├── tests/
+│   ├── FixFlow.UnitTests/
+│   ├── FixFlow.IntegrationTests/
+│   └── FixFlow.ArchitectureTests/
+├── .env.example
+├── docker-compose.yml
+├── Directory.Build.props
+├── FixFlow.sln
+├── AGENTS.md
+├── CONTRIBUTING.md
 └── README.md
 ```
 
-## 14. Domain Modules
-1. `Identity`: User accounts, JWT token generation, role management.
-2. `Issues`: Natural language issue reporting and priority determination.
-3. `Matching`: Multi-factor technician ranking engine.
-4. `Technicians`: Profiles, trade evidence, and verification statuses.
-5. `WorkOrders`: Authoritative state machine for work order lifecycles.
-6. `Resolutions`: Customer verification, rating, and rework requests.
-7. `Performance`: Historical scorecards and performance feedback calculations.
-8. `Notifications`: In-app and event-driven user notifications.
-9. `Administration`: Human-in-the-loop verification and audit logs.
+## 10. Development Roadmap & Progress
 
-## 15. Authentication & RBAC Overview
-- **Authentication**: Stateless JWT bearer tokens signed with HMAC-SHA256.
-- **Roles**: `USER`, `TECHNICIAN`, `ADMIN`.
-- **Authorization**: Enforces RBAC + Resource Ownership + Business State on the backend.
+FixFlow follows a milestone-driven development approach. Each phase is updated only after its implementation and verification criteria have been satisfied.
 
-## 16. Security Approach
-- Server-side validation via FluentValidation.
-- Centralized RFC 7807 `ProblemDetails` error handling.
-- Secure password hashing with PBKDF2.
-- MIME allowlists and server-generated GUID filenames for file uploads.
+**Status Legend**
 
-## 17. Local Setup
+- ⬜ Planned
+- 🟡 In Progress
+- ✅ Completed & Verified
+
+| Phase | Development Milestone | Status |
+|---|---|---|
+| 0 | Engineering Foundation, Architecture & Infrastructure | 🟡 In Progress |
+| 1 | Identity, Authentication & Authorization | ⬜ Planned |
+| 2 | Technician Profiles & Qualification Verification | ⬜ Planned |
+| 3 | Issue Reporting & Management | ⬜ Planned |
+| 4 | Asynchronous AI Issue Analysis | ⬜ Planned |
+| 5 | Technician Eligibility & Matching Engine | ⬜ Planned |
+| 6 | Work Order Lifecycle & SLA Management | ⬜ Planned |
+| 7 | Resolution Verification & Customer Feedback | ⬜ Planned |
+| 8 | Technician Performance & Scorecards | ⬜ Planned |
+| 9 | Notifications & Administration | ⬜ Planned |
+| 10 | Frontend Integration & User Experience Completion | ⬜ Planned |
+| 11 | System Integration, Security & Testing | ⬜ Planned |
+| 12 | CI/CD, Production Deployment & Observability | ⬜ Planned |
+
+### Phase Deliverables
+
+- **Phase 0:** Repository standards, modular architecture, Docker environment, database foundation and CI pipeline.
+- **Phase 1:** Registration, authentication, JWT, role-based access and account security.
+- **Phase 2:** Technician profiles, trade skills, qualification documents and administrative verification.
+- **Phase 3:** Issue creation, attachments, persistence and deterministic priority calculation.
+- **Phase 4:** RabbitMQ integration, Ollama inference, structured AI responses and failure recovery.
+- **Phase 5:** Eligibility filtering, weighted scoring, technician ranking and recommendation explanations.
+- **Phase 6:** Work-order creation, state transitions, SLA enforcement and status history.
+- **Phase 7:** Resolution submission, customer verification, ratings and rework requests.
+- **Phase 8:** Performance metrics, historical scorecards and ranking updates.
+- **Phase 9:** Notifications, administrative workflows and audit management.
+- **Phase 10:** Complete customer, technician and administrator interfaces.
+- **Phase 11:** End-to-end testing, security hardening, reliability and performance optimization.
+- **Phase 12:** Automated deployment, production configuration, monitoring, backups and release management.
+
+See `docs/` for detailed specifications, implementation decisions and technical documentation.
+
+## 11. Getting Started
+
 ### Prerequisites
-- .NET 9.0 SDK
-- Node.js (v20+ or v24) & npm
-- Docker Desktop
+
+- Git
+- Docker Desktop / Docker Engine
+- .NET 10 SDK
+- Node.js LTS and npm
+- PowerShell (for Windows helper scripts)
+
+### Clone Repository
 
 ```bash
-# 1. Clone repository and copy environment settings
-git clone https://github.com/your-org/FixFlow.git
+git clone https://github.com/HansiAshara/FixFlow.git
 cd FixFlow
-cp .env.example .env
 ```
 
-## 18. Environment Variables
-See [.env.example](file:///d:/FixFlow/.env.example) for the full list of database, RabbitMQ, JWT, and Ollama settings.
+### Configure Environment
 
-## 19. Docker Usage
+```powershell
+Copy-Item .env.example .env
+```
+
+Configure the required database, RabbitMQ, JWT and Ollama settings in `.env`.
+
+### Start Infrastructure
+
 ```bash
-# Start all containers in background
 docker compose up -d
-
-# Pull the default AI model into Ollama container
-powershell infra/scripts/pull-ollama-model.ps1
 ```
 
-## 20. Database Migrations
-```bash
-# Apply EF Core migrations locally
-dotnet ef database update --project apps/api/FixFlow.Api.csproj
-```
+### Run Backend API
 
-## 21. Running Web / API / Worker Locally
 ```bash
-# Run Backend API (Port 5000)
 dotnet run --project apps/api/FixFlow.Api.csproj
+```
 
-# Run Background Worker
+### Run Background Worker
+
+```bash
 dotnet run --project apps/worker/FixFlow.Worker.csproj
+```
 
-# Run Frontend Web (Port 5173 / 3000)
+### Run Frontend
+
+```bash
 cd apps/web
+npm ci
 npm run dev
 ```
 
-## 22. Testing
+Refer to `docs/` and `AGENTS.md` for detailed development instructions.
+
+## 12. Database Migrations
+
+FixFlow uses Entity Framework Core code-first migrations.
+
 ```bash
-# Run all backend unit, integration, and architecture tests
-dotnet test FixFlow.sln
+# Create a migration
+dotnet ef migrations add <MigrationName> \
+  --project apps/api/FixFlow.Api.csproj
 
-# Run frontend tests
-cd apps/web && npm run test
-
-# Run frontend typecheck
-cd apps/web && npm run typecheck
+# Apply migrations
+dotnet ef database update \
+  --project apps/api/FixFlow.Api.csproj
 ```
 
-## 23. Git Workflow
-- `main`: Release-ready code.
-- `develop`: Integration branch.
-- Feature branches: `feat/<module>-<description>`.
-- Commit conventions: [Conventional Commits](https://www.conventionalcommits.org/).
+Production migrations must be reviewed and applied through a controlled deployment process.
 
-## 24. Contributor Workflow & Ownership
-- **Contributor 1**: Primary on `Issues`, `Matching`, AI Issue Analysis.
-- **Contributor 2**: Primary on `Technicians`, `WorkOrders`, `Resolutions`, `Performance`.
-- **Shared**: `Identity`, `Administration`, `Contracts`, Infrastructure.
-See [CONTRIBUTING.md](file:///d:/FixFlow/CONTRIBUTING.md) for details.
+## 13. Testing & Quality Assurance
 
-## 25. Documentation Links
-- [Product Requirements](file:///d:/FixFlow/docs/PRODUCT_REQUIREMENTS.md)
-- [Architecture Specification](file:///d:/FixFlow/docs/ARCHITECTURE.md)
-- [Domain Model](file:///d:/FixFlow/docs/DOMAIN_MODEL.md)
-- [Database Design](file:///d:/FixFlow/docs/DATABASE.md)
-- [API Contracts](file:///d:/FixFlow/docs/API_CONTRACTS.md)
-- [Event Contracts](file:///d:/FixFlow/docs/EVENT_CONTRACTS.md)
-- [AI Architecture & Trust Boundaries](file:///d:/FixFlow/docs/AI_DESIGN.md)
-- [Technician Matching Algorithm](file:///d:/FixFlow/docs/MATCHING_ALGORITHM.md)
-- [Technician Performance Algorithm](file:///d:/FixFlow/docs/PERFORMANCE_ALGORITHM.md)
-- [Work Order State Machine](file:///d:/FixFlow/docs/WORK_ORDER_STATE_MACHINE.md)
-- [Security Architecture](file:///d:/FixFlow/docs/SECURITY.md)
-- [Role-Based Access Control (RBAC)](file:///d:/FixFlow/docs/RBAC.md)
-- [Frontend Engineering Rules](file:///d:/FixFlow/docs/FRONTEND_RULES.md)
-- [Backend Engineering Rules](file:///d:/FixFlow/docs/BACKEND_RULES.md)
-- [Testing Strategy](file:///d:/FixFlow/docs/TESTING.md)
-- [Git Workflow](file:///d:/FixFlow/docs/GIT_WORKFLOW.md)
-- [Deployment Guide](file:///d:/FixFlow/docs/DEPLOYMENT.md)
-- [Agent & Developer Rules](file:///d:/FixFlow/AGENTS.md)
+### Backend
+
+```bash
+dotnet test FixFlow.sln
+```
+
+### Frontend
+
+```bash
+cd apps/web
+
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+```
+
+Testing covers business rules, matching algorithms, authorization, work-order transitions, persistence, event processing, and frontend workflows.
+
+## 14. Continuous Integration & Deployment
+
+GitHub Actions is used to automate quality checks and application delivery.
+
+**Continuous Integration**
+- Backend restore and build.
+- Unit, integration and architecture tests.
+- Frontend type checking and linting.
+- Frontend automated tests and production build.
+- Docker configuration validation.
+- Container image build.
+
+**Continuous Deployment**
+- Feature branches: automated validation.
+- `develop`: staging deployment.
+- `main`: production release workflow.
+- Version tags: versioned application releases.
+
+Production deployment includes protected environments, secure secrets, health verification and rollback procedures.
+
+## 15. Security & Reliability
+
+FixFlow follows security-first engineering practices:
+
+- JWT authentication and backend-enforced authorization.
+- Role-based access control and resource ownership validation.
+- Secure password hashing and token lifecycle management.
+- Server-side request validation.
+- MIME-type restrictions and secure file storage.
+- AI output validation and trust-boundary enforcement.
+- Idempotent event processing and reliable message handling.
+- Centralized error handling using RFC 7807 Problem Details.
+- Audit trails for sensitive administrative operations.
+- Secure configuration and secret management.
+- Automated testing and dependency maintenance.
+
+## 16. Future Enhancements
+
+Potential improvements beyond the initial release:
+
+- Real-time updates using SignalR.
+- Advanced location-based technician discovery.
+- More sophisticated recommendation models.
+- Multi-provider AI support.
+- Advanced operational analytics.
+- Mobile application for customers and technicians.
+
+---
+
+**FixFlow — Turning maintenance problems into accountable, intelligent service solutions.**
+
